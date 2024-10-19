@@ -1,0 +1,86 @@
+
+
+
+-- Services
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local players = game:GetService("Players")
+
+-- Variables
+local footstepsModule = require(replicatedStorage:WaitForChild("FootstepModule"))
+
+local player = players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+-- Sounds
+local footstepsSound = rootPart:WaitForChild("Footsteps")
+
+-- Boolean
+local cooldown = 0.4
+local lastSound = ""
+
+-- // Functions
+
+if rootPart:FindFirstChild("Running") then
+    rootPart.Running.Volume = 0
+end
+
+-- Check if player is walking
+local check_movement = function()
+    if humanoid.WalkSpeed > 0 and humanoid.MoveDirection.Magnitude > 0 and humanoid.FloorMaterial ~= Enum.Material.Air then
+        return true
+    elseif humanoid.WalkSpeed <= 0 or humanoid.MoveDirection.Magnitude <= 0 or humanoid.FloorMaterial == Enum.Material.Air then
+        return false
+    end
+end
+
+-- Check repeated sound
+local check_repetition = function(sound)
+    if sound ~= lastSound then
+        lastSound = sound
+
+        return false
+    else
+        return true
+    end
+end
+
+-- Get sound id
+get_material = function()
+    
+    local soundTable = footstepsModule:GetTableFromMaterial(humanoid.FloorMaterial)
+    local randomSound = footstepsModule:GetRandomSound(soundTable)
+    
+    if check_repetition(randomSound) == false then
+        return randomSound
+    else
+        randomSound = get_material()
+        
+        return randomSound
+    end
+end
+
+-- Change cooldown based on speed
+humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+    if humanoid.WalkSpeed <= 16 then
+        cooldown = 0.4
+    else
+        cooldown = 0.325
+    end
+end)
+
+-- Main loop
+spawn(function()
+    while wait(cooldown) do
+        
+        if check_movement() then
+            
+            footstepsSound.SoundId = get_material()
+            
+            footstepsSound.Parent = nil
+            footstepsSound.Parent = rootPart
+        end
+    end
+end)
